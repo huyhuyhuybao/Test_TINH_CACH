@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài Test Tính Cách Của Bạn</title>
+    <!-- Sử dụng Tailwind CSS để làm đẹp giao diện -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 md:p-8 relative">
+        <div id="intro-screen" class="text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">Khám Phá Tính Cách 🌟</h1>
+            <p class="text-gray-600 mb-8">Trả lời 10 câu hỏi ngắn dưới đây để AI phân tích xem bạn là người có tính cách như thế nào nhé!</p>
+            <button onclick="startTest()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition-all">Bắt đầu ngay</button>
+        </div>
+
+        <div id="quiz-screen" class="hidden">
+            <div class="mb-4 text-sm font-semibold text-gray-500">Câu hỏi <span id="current-q-num">1</span>/10</div>
+            <h2 id="question-text" class="text-xl font-bold text-gray-800 mb-6"></h2>
+            <div id="options-container" class="space-y-3">
+                <!-- Các nút lựa chọn sẽ được tạo bằng Javascript -->
+            </div>
+        </div>
+
+        <div id="loading-screen" class="hidden text-center py-10">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <h2 class="text-xl font-bold text-gray-800">AI đang phân tích kết quả...</h2>
+            <p class="text-gray-500">Vui lòng chờ trong giây lát nhé!</p>
+        </div>
+
+        <div id="result-screen" class="hidden text-center">
+            <h2 class="text-3xl font-bold text-orange-600 mb-6">Kết Quả Của Bạn</h2>
+            <div class="bg-orange-50 p-6 rounded-xl border border-orange-100 mb-8">
+                <p id="result-text" class="text-gray-700 leading-relaxed text-lg whitespace-pre-wrap"></p>
+            </div>
+            <button onclick="location.reload()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded-full transition-all">Làm Lại Bài Test</button>
+        </div>
+    </div>
+
+    <script>
+        // API KEY BẠN ĐÃ CUNG CẤP
+        const API_KEY = "AQ.Ab8RN6K_ZWBGpDTGRWt41P6f40MbMowEE0PoxYobNvRidhXQMg";
+        
+        const questions = [
+            { q: "1. Vào cuối tuần rảnh rỗi, bạn thích làm gì nhất?", options: ["Ra ngoài tụ tập với bạn bè", "Ở nhà xem phim, đọc sách, nghỉ ngơi"] },
+            { q: "2. Khi phải đưa ra một quyết định quan trọng, bạn thường:", options: ["Dựa vào linh cảm và cảm xúc của mình", "Phân tích kỹ lưỡng, suy luận logic"] },
+            { q: "3. Trong một đám đông người lạ, bạn sẽ:", options: ["Chủ động bắt chuyện với người khác", "Đợi người khác đến bắt chuyện với mình"] },
+            { q: "4. Bạn thích phong cách làm việc nào hơn?", options: ["Có kế hoạch, quy trình rõ ràng", "Linh hoạt, tùy cơ ứng biến"] },
+            { q: "5. Khi gặp rắc rối buồn phiền, bạn cần gì nhất?", options: ["Ai đó lắng nghe và đồng cảm", "Một giải pháp để giải quyết vấn đề ngay"] },
+            { q: "6. Bạn đánh giá cao tính cách nào ở một người bạn?", options: ["Sự chân thành, ấm áp", "Sự thông minh, thú vị"] },
+            { q: "7. Khi học một điều mới, bạn thích:", options: ["Thực hành luôn, sai đâu sửa đó", "Nghiên cứu kỹ lý thuyết trước khi làm"] },
+            { q: "8. Bạn cảm thấy năng lượng của mình dồi dào nhất khi:", options: ["Tham gia các hoạt động sôi nổi, đông người", "Có không gian riêng tư, yên tĩnh"] },
+            { q: "9. Bạn thường quan tâm đến điều gì hơn?", options: ["Những việc thực tế đang diễn ra hiện tại", "Những ý tưởng và khả năng trong tương lai"] },
+            { q: "10. Mục tiêu lớn nhất trong cuộc sống của bạn là gì?", options: ["Đạt được thành công và sự công nhận", "Có một cuộc sống bình yên và hạnh phúc"] }
+        ];
+
+        let currentQuestion = 0;
+        let userAnswers = [];
+
+        function startTest() {
+            document.getElementById('intro-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = questions[currentQuestion];
+            document.getElementById('current-q-num').innerText = currentQuestion + 1;
+            document.getElementById('question-text').innerText = q.q;
+            
+            const optionsDiv = document.getElementById('options-container');
+            optionsDiv.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all font-medium text-gray-700";
+                btn.innerText = opt;
+                btn.onclick = () => selectOption(opt);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function selectOption(answer) {
+            userAnswers.push({
+                question: questions[currentQuestion].q,
+                answer: answer
+            });
+            
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                loadQuestion();
+            } else {
+                finishTest();
+            }
+        }
+
+        async function finishTest() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('hidden');
+
+            // Tạo câu lệnh (prompt) gửi cho AI
+            let promptText = "Bạn là một chuyên gia tâm lý học thân thiện. Tôi có một người vừa làm bài trắc nghiệm tính cách. Dưới đây là 10 câu hỏi và câu trả lời của họ:\n\n";
+            userAnswers.forEach(item => {
+                promptText += `- ${item.question}\n  Đáp án: ${item.answer}\n`;
+            });
+            promptText += "\nDựa vào các câu trả lời trên, hãy tổng hợp và rút ra kết luận về tính cách của người này trong khoảng 4-5 câu. Bắt đầu bằng câu 'Bạn là người có tính cách...'. Hãy dùng giọng điệu thân thiện, tích cực, xưng 'bạn'.";
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                const aiResult = data.candidates[0].content.parts[0].text;
+                
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('result-screen').classList.remove('hidden');
+                document.getElementById('result-text').innerText = aiResult;
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('result-screen').classList.remove('hidden');
+                document.getElementById('result-text').innerText = "Đã có lỗi xảy ra trong quá trình kết nối với AI để phân tích. Vui lòng thử lại bài test nhé!";
+            }
+        }
+    </script>
+</body>
+</html>
